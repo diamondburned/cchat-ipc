@@ -1,0 +1,42 @@
+// Call describes the RPC convention used by cchat.
+namespace cchat.call;
+
+file_identifier "CALL";
+
+include "core.fbs";
+
+// ID is a base table that other method parameters extend on. It implements
+// everything needed to identify an object and call. It is used in both
+// directions on both ends: both as a call request and a call response.
+table ID {
+	object:cchat.core.Object (required);
+
+	// call_id is used to identify (as a nonce) each method call and its
+	// response on an object. Note that call IDs are managed solely by the side
+	// that invokes the call, so in a way, both the frontend and backend manages
+	// its own registry of call IDs.
+	call_id:uint64;
+}
+
+// StopHandle contains the ID to unsubscribe and destroy an object from the
+// listener.
+struct StopHandle {
+	stop_id:uint64;
+}
+
+// Stopper is a service for a function to unsubscribe and destroy an object from
+// a StopHandle.
+rpc_service Stopper {
+	Stop(StopHandle);
+}
+
+// Context contains the context ID which is used for cancellation.
+struct Context {
+	ctx_id:uint64;
+}
+
+// Canceller is a service to cancel a context. Implementations should ignore
+// context IDs that it cannot find.
+rpc_service Canceller {
+	Cancel(Context);
+}

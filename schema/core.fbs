@@ -1,0 +1,78 @@
+namespace cchat.core;
+
+file_identifier "CORE";
+
+// Error represents a Go error.
+struct Error {
+	error:string;
+}
+
+// Time represents a time.Time without a timezone.
+table Time {
+	unix_nano:int64;
+}
+
+// StringPair is a type with a pair of strings being the key and value. This
+// type is usually used within a vector as a replacement for a map of strings.
+struct StringPair {
+	k:string;
+	v:string;
+}
+
+// Object contains the identification of an object. It does not contain
+// extraneous metadata.
+struct Object {
+	object_id:uint64;
+}
+
+// Reader is a union of possible reader type implementations.
+union Reader {
+	// Stream is the typical io.Reader implementation.
+	Stream,
+	// File is derived from *os.File.
+	File,
+}
+
+// File describes a physical file on disk. Backends that read this file must
+// not modify nor delete it.
+table File {
+	filepath:string;
+}
+
+// Stream describes the information of a stream ticket along with extraneous
+// metadata.
+table Stream {
+	ticket:StreamTicket (required);
+
+	// buffer_size suggests to the receiver the size of each data chunk to be
+	// sent using StreamBytes. This suggestion is not required.
+	buffer_size:int64;
+}
+
+// StreamTicket describes a unique ID that can be used to start and stop an
+// arbitrary byte stream.
+struct StreamTicket {
+	ticket_id:uint64;
+}
+
+// StreamData is sent over once the backend asks for a stream using the
+// Streamer service.
+struct StreamData {
+	ticket:StreamTicket;
+	data:StreamBytes;
+}
+
+// StreamBytes represents the content of the StreamData.
+union StreamBytes {
+	[ubyte],
+	Error,
+}
+
+// Streamer is the service to begin sending chunks of stream over.
+rpc_service Streamer {
+	// Begin asks the sender to start sending StreamData over.
+	Begin(StreamTicket):Error;
+	// Stop asks the sender to stop sending. The sender does not have to obey
+	// this, and the receiver can simply ignore theh stream.
+	Stop(StreamTicket);
+}
