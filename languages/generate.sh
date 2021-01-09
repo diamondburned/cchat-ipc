@@ -10,7 +10,7 @@ languages=(
 
 for dir in "${!languages[@]}"; {
 	rm -rf   "./$dir"
-	flatc -o "./$dir" "--${languages[$dir]}" ../schema/*.fbs || {
+	flatc -o "./$dir" "--${languages[$dir]}" --grpc ../schema/*.fbs || {
 		echo "Failed to generate $dir; removing."
 		rm -rf "./$dir"
 	}
