@@ -1,9 +1,14 @@
+include "core.fbs";
+
 // Call describes the RPC convention used by cchat.
 namespace cchat.call;
 
 file_identifier "CALL";
 
-include "core.fbs";
+// NoReply is an empty table that's here to satisfy the schema needing a return
+// type. It is used in calls where a confirm that the call is finished is not
+// needed and should not be relied upon.
+table NoReply {}
 
 // ID is a base table that other method parameters extend on. It implements
 // everything needed to identify an object and call. It is used in both
@@ -20,23 +25,23 @@ table ID {
 
 // StopHandle contains the ID to unsubscribe and destroy an object from the
 // listener.
-struct StopHandle {
+table StopHandle {
 	stop_id:uint64;
 }
 
 // Stopper is a service for a function to unsubscribe and destroy an object from
 // a StopHandle.
 rpc_service Stopper {
-	Stop(StopHandle);
+	Stop(StopHandle):cchat.core.Error;
 }
 
 // Context contains the context ID which is used for cancellation.
-struct Context {
+table Context {
 	ctx_id:uint64;
 }
 
 // Canceller is a service to cancel a context. Implementations should ignore
 // context IDs that it cannot find.
 rpc_service Canceller {
-	Cancel(Context);
+	Cancel(Context):cchat.core.Error;
 }

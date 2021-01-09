@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"regexp"
-	"strconv"
 	"strings"
 	"unicode"
 
@@ -12,7 +11,6 @@ import (
 
 type fieldOpts struct {
 	required bool
-	id       *int
 	attribs  []string
 }
 
@@ -58,27 +56,28 @@ func (g *Generator) writeFieldDirect(name, goType string, opts fieldOpts) {
 		}
 	}
 
+	name = PascalToSnake(name)
+
+	// Disallow forbidden names.
+	switch name {
+	case "error": // conflicts with type Error
+		name = "err"
+	}
+
 	g.body.WriteString(Indent)
-	g.body.WriteString(PascalToSnake(name))
+	g.body.WriteString(name)
 	g.body.WriteString(":")
 
 	g.body.WriteString(typ)
 
-	var attrs []string
-	if opts.id != nil {
-		attrs = append(attrs, "id: "+strconv.Itoa(*opts.id))
-		*opts.id++
-	}
 	if opts.required {
-		attrs = append(attrs, "required")
+		opts.attribs = append(opts.attribs, "required")
 	}
 
-	attrs = append(attrs, opts.attribs...)
-
-	if len(attrs) > 0 {
+	if len(opts.attribs) > 0 {
 		g.body.WriteByte(' ')
 		g.body.WriteByte('(')
-		g.body.WriteString(strings.Join(attrs, ", "))
+		g.body.WriteString(strings.Join(opts.attribs, ", "))
 		g.body.WriteByte(')')
 	}
 

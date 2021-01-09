@@ -21,6 +21,7 @@ func main() {
 	}
 
 	gen := NewGenerator()
+	gen.RegisterTypeAlias("error", namespaceType("core", "Error"))
 	gen.RegisterTypeAlias("io.Reader", namespaceType("core", "Reader"))
 	gen.RegisterTypeAlias("time.Time", namespaceType("core", "Time"))
 	gen.RegisterTypeAlias("time.Duration", "int64") // nanoseconds

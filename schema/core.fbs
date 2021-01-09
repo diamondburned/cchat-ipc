@@ -3,8 +3,8 @@ namespace cchat.core;
 file_identifier "CORE";
 
 // Error represents a Go error.
-struct Error {
-	error:string;
+table Error {
+	error:string (required);
 }
 
 // Time represents a time.Time without a timezone.
@@ -14,9 +14,9 @@ table Time {
 
 // StringPair is a type with a pair of strings being the key and value. This
 // type is usually used within a vector as a replacement for a map of strings.
-struct StringPair {
-	k:string;
-	v:string;
+table StringPair {
+	k:string (required);
+	v:string (required);
 }
 
 // Object contains the identification of an object. It does not contain
@@ -36,7 +36,7 @@ union Reader {
 // File describes a physical file on disk. Backends that read this file must
 // not modify nor delete it.
 table File {
-	filepath:string;
+	filepath:string (required);
 }
 
 // Stream describes the information of a stream ticket along with extraneous
@@ -51,21 +51,16 @@ table Stream {
 
 // StreamTicket describes a unique ID that can be used to start and stop an
 // arbitrary byte stream.
-struct StreamTicket {
+table StreamTicket {
 	ticket_id:uint64;
 }
 
 // StreamData is sent over once the backend asks for a stream using the
 // Streamer service.
-struct StreamData {
-	ticket:StreamTicket;
-	data:StreamBytes;
-}
-
-// StreamBytes represents the content of the StreamData.
-union StreamBytes {
-	[ubyte],
-	Error,
+table StreamData {
+	ticket_id:uint64;
+	bytes:[ubyte];
+	error:Error;
 }
 
 // Streamer is the service to begin sending chunks of stream over.
@@ -74,5 +69,5 @@ rpc_service Streamer {
 	Begin(StreamTicket):Error;
 	// Stop asks the sender to stop sending. The sender does not have to obey
 	// this, and the receiver can simply ignore theh stream.
-	Stop(StreamTicket);
+	Stop(StreamTicket):Error;
 }

@@ -10,6 +10,11 @@ func (g *Generator) writeServiceMethod(tail *Generator, iface string, method rep
 	paramsName := tail.writeMethodParameterTable(iface, method)
 	returnName := tail.writeMethodReturnTable(iface, method)
 
+	// FlatBuffers does not like an empty return type.
+	if returnName == "" {
+		returnName = namespaceType("call", "NoReply")
+	}
+
 	name := method.UnderlyingName()
 
 	fieldComment(&g.body, method.UnderlyingComment())
@@ -18,11 +23,8 @@ func (g *Generator) writeServiceMethod(tail *Generator, iface string, method rep
 	g.body.WriteByte('(')
 	g.body.WriteString(paramsName)
 	g.body.WriteByte(')')
-
-	if returnName != "" {
-		g.body.WriteByte(':')
-		g.body.WriteString(returnName)
-	}
+	g.body.WriteByte(':')
+	g.body.WriteString(returnName)
 
 	g.body.WriteString(";\n")
 }
@@ -141,7 +143,7 @@ func (g *Generator) writeMethodReturnTable(iface string, method repository.Metho
 
 	if returnsErr {
 		typ := namespaceType("core", "Error")
-		g.writeFieldDirect("error", typ, fieldOpts{})
+		g.writeFieldDirect("err", typ, fieldOpts{})
 	}
 	if hasStopFn {
 		typ := namespaceType("call", "StopHandle")

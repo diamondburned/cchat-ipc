@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/diamondburned/cchat/repository"
 )
@@ -35,17 +36,16 @@ func (g *Generator) WriteInterface(pkg repository.Package, iface repository.Inte
 		service.takeFrom(tail)
 	}
 
-	id := 0
 	tail := g.clone()
 
 	g.WriteComment(iface.Comment)
 	g.body.WriteString("table ")
 	g.body.WriteString(iface.Name)
 
-	if len(methods.others) > 0 {
+	if len(methods.services) > 0 {
 		g.body.WriteByte(' ')
-		g.body.WriteString("(service: ")
-		g.body.WriteString(strconv.Quote(iface.Name + "Service"))
+		g.body.WriteString("(services: ")
+		g.body.WriteString(strconv.Quote(strings.Join(methods.services, ", ")))
 		g.body.WriteString(")")
 	}
 
@@ -79,11 +79,8 @@ func (g *Generator) WriteInterface(pkg repository.Package, iface repository.Inte
 			tail.writeStruct(field.Type, returns)
 		}
 
-		g.writeField(field, fieldOpts{id: &id})
+		g.writeField(field, fieldOpts{})
 	}
-
-	// Asserters go last and start at 50.
-	id = 50
 
 	if len(methods.asserters) > 0 {
 		g.WriteLine()
@@ -95,7 +92,7 @@ func (g *Generator) WriteInterface(pkg repository.Package, iface repository.Inte
 			Name: PascalToSnake(field.ChildType),
 			Type: field.ChildType,
 		}
-		g.writeField(fieldType, fieldOpts{id: &id})
+		g.writeField(fieldType, fieldOpts{})
 	}
 
 	g.body.WriteByte('}')
@@ -111,7 +108,8 @@ type methods struct {
 	asserters []repository.AsserterMethod
 	others    []repository.Method
 
-	pkg repository.Package
+	pkg      repository.Package
+	services []string
 }
 
 func newMethods(pkg repository.Package) methods { return methods{pkg: pkg} }
@@ -139,6 +137,10 @@ func (methods *methods) load(iface repository.Interface) {
 		methods.others = append(methods.others, method)
 	}
 
+	if len(methods.others) > 0 {
+		methods.services = append(methods.services, iface.Name+"Service")
+	}
+
 	// Load embedded interfaces recursively into another methods list, and then
 	// prepend that.
 	var child = newMethods(methods.pkg)
@@ -152,7 +154,12 @@ func (methods *methods) load(iface repository.Interface) {
 
 	methods.fields = append(child.fields, methods.fields...)
 	methods.asserters = append(child.asserters, methods.asserters...)
-	methods.others = append(child.others, methods.others...)
+
+	// We have methods that we cannot inherit directly, which means that a
+	// Service will be required. However, since that would lead to namespace
+	// conflicts, we'll just have to indicate that there's inheritance and not
+	// copy over the methods.
+	methods.services = append(methods.services, child.services...)
 
 	return
 }
