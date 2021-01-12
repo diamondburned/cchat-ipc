@@ -17,9 +17,6 @@ func main() {
 			pkg:  pkg,
 			file: f,
 		}
-
-		// Since Go can just import cchat itself, we don't need to generate
-		// atypical types that aren't interfaces.
 	}
 }
 
@@ -44,4 +41,8 @@ type Generator struct {
 }
 
 // genTypes generates unimportant types.
-func (g *Generator) genTypes() {}
+func (g *Generator) genTypes() {
+	for _, sstruct := range g.pkg.Structs {
+
+	}
+}
