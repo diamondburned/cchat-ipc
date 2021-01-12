@@ -147,16 +147,6 @@ func (inst *Instance) wrapError(err error) msgp.Encodable {
 	}
 }
 
-// InstanceType is an enum type that signifies the type of the other end's
-// instance. It is implemented this way rather than a typed structure to
-// be efficient in memory usage.
-type InstanceType uint64
-
-const (
-	InvalidInstanceType InstanceType = iota
-	MessagesContainerInstance
-)
-
 type contextMap struct {
 	mutex    sync.Mutex
 	contexts map[CallID]context.CancelFunc
