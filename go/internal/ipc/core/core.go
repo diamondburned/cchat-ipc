@@ -36,20 +36,25 @@ type File struct {
 // metadata.
 type Stream struct {
 	Ticket StreamTicket `msg:"t"`
-
-	// BufferSize suggests to the receiver the size of each data chunk to be
-	// sent using StreamBytes. This suggestion is not required.
-	BufferSize uint32 `msg:"buffer_size"`
 }
 
 // StreamTicket is a unique identifier for each stream.
 type StreamTicket uint64
 
-// StreamData is a possible event that is an incoming piece of a stream.
-type StreamData struct {
+// StreamPacket is a possible event that is an incoming piece of a stream. It
+// contains the byte array of arbitrary length, usually segmented using a
+// constant in the implementation, to send over to the client.
+type StreamPacket struct {
 	Ticket StreamTicket `msg:"t"`
-	Bytes  []byte       `msg:"b,omitempty"`
-
+	// Bytes contains the segment of data belonging to the stream.
+	// Implementations should keep this slice small and prefer sending multiple
+	// data packets over the connection to avoid clogging other events.
+	//
+	// The length of the byte arrays must cumulatively add up to the requested
+	// amount at maximum; the sender should ensure this. The receiver will wait
+	// until either an error occurs or the requested amount is filled, so the
+	// sender must accomodate for either scenario accordingly.
+	Bytes []byte `msg:"b,omitempty"`
 	// Error is the optional error that a stream may emit. The stream is
 	// considered to be invalid after an error has been emitted and must not be
 	// used again.
@@ -57,6 +62,27 @@ type StreamData struct {
 	// An EOF error must be sent over the wire with the associated ticket to
 	// indicate the end of a stream. The error can be attached with the bytes.
 	Error *Error `msg:"e,omitempty"`
+}
+
+// MaxStreamAmount defines the maximum number of bytes that the receiver could
+// request the sender to send over. Both the receiver and the sender should
+// adhere to this constand and error out when the receiver requests a number
+// higher than this.
+const MaxStreamAmount = 128 * 1024 * 1024
+
+// StreamRequest is sent by the stream receiver to request more byte packets.
+// The receiver should call this when the buffer is drained and block until more
+// data arrives.
+type StreamRequest struct {
+	Ticket StreamTicket `msg:"t"`
+	// Amount is the requested amount of bytes to send over. Note that the
+	// sender must only send maximum this amount of bytes or less; the receiver
+	// must ignore extraneous bytes sent over until it requests for more. This
+	// is to allow the use of fixed buffers.
+	//
+	// If a zero amount is sent, the sender must interrupt or close the stream
+	// entirely.
+	Amount uint32 `msg:"amount"`
 }
 
 // CallID is the ID of a call. How the ID is generated is up to the
@@ -95,14 +121,16 @@ type InstanceType uint16
 // dependent on its parent: if the parent is destroyed or is no longer valid,
 // then so are all its children instances.
 //
-// However, there are circumstances when this is not true. If an instance has
-// explicit disposers/destructors such as an IOMethod marked as Disposer or a
-// ContainerMethod with a stop handle, then that child instance (and all of its
-// children instances) must be explicitly destroyed independently of the parent.
-// Any call using the parent instance into its children's children is therefore
-// invalid, except on calls to the children itself (the second level, parent
-// being the first), then the server must attempt to reassert the children
-// accordingly.
+// However, there are circumstances when this is not strictly true. If an
+// instance has explicit disposers/destructors such as an IOMethod marked as
+// Disposer or a ContainerMethod with a stop handle, then that child instance
+// (and all of its children instances) can be explicitly destroyed independently
+// of the parent. Any call using the parent instance into its children's
+// children is therefore invalid, except on calls to the children itself (the
+// second level, parent being the first), then the server must attempt to
+// reassert the children accordingly. Note that this does not mean that this
+// specific child instance can outlive its parent; it simply means the child
+// instance can be destroyed and created independently of the parent's lifetime.
 //
 // During code generation, a method path unique to the parent instance type can
 // be generated in the call function without needing to store it during runtime,
@@ -147,17 +175,17 @@ type MethodID uint8
 //    Call{
 //        InstanceID: 2,
 //        CallID:     0,
-//        MethodPath: []MethodID{1, 0},
+//        MethodPath: MethodPath{1, 0},
 //        Parameters: MarshalMsgp(Parameter{}),
 //    }
 //
 // To visualize it better, this call convention can be represented using the
 // following diagram:
 //
-//    - Parent (id: 2)           <- InstanceID = 2
+//    - Parent (id: 2)          <- InstanceID = 2
 //        - UnrelatedMethod: 0
-//        - AsChild: 1           <- MethodPath[0] = 1
-//            - Method: 0        <- MethodPath[1] = 0
+//        - AsChild: 1          <- MethodPath[0] = 1
+//            - Method: 0       <- MethodPath[1] = 0
 //
 type MethodPath []MethodID
 
