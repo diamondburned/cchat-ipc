@@ -104,6 +104,26 @@ func ProcessType(typ string, transFn func(string) string) string {
 	}
 }
 
+// UnderlyingTypes breaks down the given type path and returns a list of
+// underlying types.
+func UnderlyingTypes(typ string) []string {
+	switch {
+	case strings.HasPrefix(typ, "[]"):
+		return []string{typ[2:]}
+
+	case strings.HasPrefix(typ, "map["):
+		matches := mapRegex.FindStringSubmatch(typ)
+		if matches == nil {
+			return []string{typ}
+		}
+
+		return []string{matches[1], matches[2]}
+
+	default:
+		return []string{typ}
+	}
+}
+
 func ReceiverID(typ string) string {
 	if typ == "error" {
 		return "err"

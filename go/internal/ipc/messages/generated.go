@@ -8,6 +8,18 @@ import (
 	"github.com/diamondburned/cchat/text"
 )
 
+type TextRich struct {
+	Content  string        `msg:"content"`
+	Segments []TextSegment `msg:"segments"`
+}
+
+func (t TextRich) Convert() text.Rich {
+	return text.Rich{
+		Content:  r.Content,
+		Segments: r.Segments.Convert(),
+	}
+}
+
 type AuthenticateEntry struct {
 	Name        string `msg:"name"`
 	Placeholder string `msg:"placeholder"`
@@ -65,17 +77,5 @@ func (e ErrInvalidConfigAtField) Convert() cchat.ErrInvalidConfigAtField {
 	return cchat.ErrInvalidConfigAtField{
 		Key: e.Key,
 		Err: e.Err.Convert(),
-	}
-}
-
-type TextRich struct {
-	Content  string        `msg:"content"`
-	Segments []TextSegment `msg:"segments"`
-}
-
-func (t TextRich) Convert() text.Rich {
-	return text.Rich{
-		Content:  r.Content,
-		Segments: r.Segments.Convert(),
 	}
 }

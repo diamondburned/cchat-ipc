@@ -1,3 +1,6 @@
+// Package core describes the primitives of the cchat IPC protocol.
+//
+
 package core
 
 //go:generate go run github.com/tinylib/msgp -tests=false -o=msgp.go -file=.
@@ -135,9 +138,28 @@ type InstanceType uint16
 // During code generation, a method path unique to the parent instance type can
 // be generated in the call function without needing to store it during runtime,
 // as the method paths will be constant.
+//
+// Pure Instances
+//
+// All methods within an instance that is of type GetterMethod and has no
+// arguments must be resolved within before being sent over the wire. Structs
+// and instances with only these methods can consider its type to be "pure" and
+// therefore do not need instance IDs, since it doesn't need to be refered to
+// again in the future.
+//
+// Instances within a Struct
+//
+// To ease memory management, structs must not have methods that require
+// arguments. In other words, they must be pure. With this assumption, both ends
+// need not store the struct inside a registry for future calls, as all values
+// can be prefetched once and loaded all over the wire.
+//
+// Code generators should be aware of this assumption and fail appropriately
+// when it detects a violation. Any violation of this assumption is considered a
+// cchat bug and should be reported.
 type Instance struct {
-	// ID is the ID of this object.
-	ID InstanceID `msg:"id"`
+	// ID is the ID of this object. It is omitted if the instance type is pure.
+	ID InstanceID `msg:"id,omitempty"`
 	// Type is the type of this object. The IPC implementation (such as this
 	// one) can use this information to infer the name of the instance.
 	Type InstanceType `msg:"typ"`
