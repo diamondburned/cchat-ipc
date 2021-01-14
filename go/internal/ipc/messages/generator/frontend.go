@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/diamondburned/cchat-ipc/go/internal/messages/_generator/genutil"
+	"github.com/diamondburned/cchat-ipc/go/internal/ipc/messages/generator/genutil"
 	"github.com/diamondburned/cchat/repository"
 )
 
